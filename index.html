@@ -70,6 +70,15 @@
   .calc-item{background:var(--green-soft);border:1px solid #dbe3d3;border-radius:8px;padding:10px 12px;text-align:center;}
   .calc-item .v{font-size:18px;font-weight:600;color:var(--green);}
   .calc-item .k{font-size:12px;color:var(--muted);margin-top:2px;}
+  .goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;}
+  .goal-item{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .goal-item .gt{font-size:14px;font-weight:600;color:#2f2a24;margin-bottom:6px;}
+  .goal-item .gv{font-size:13px;color:#4a453d;line-height:1.7;}
+  .goal-item .gv b{color:var(--accent);font-size:16px;}
+  .goal-item .gbar{height:7px;background:#efe9df;border-radius:5px;overflow:hidden;margin-top:8px;}
+  .goal-item .gfill{height:100%;background:var(--accent);border-radius:5px;transition:width .4s;}
+  .goal-item .gpct{font-size:12px;color:var(--muted);margin-top:5px;}
+  .goal-item .gpct b{color:var(--accent);font-size:13px;}}
   .note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.7;}
   .footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;text-align:center;letter-spacing:.04em;}
   .footer strong{color:var(--accent);}
@@ -111,6 +120,33 @@
 <!-- 每日三件小事 -->
 <div class="section" id="listWrap"></div>
 
+<!-- 减重目标 -->
+<div class="section">
+  <h2><span class="no">目</span>我的减重目标</h2>
+  <div class="lead">基于身高自动算出两站目标。每周保存测量后自动更新进度。</div>
+  <div class="card">
+    <div class="goal-grid" id="goalBox">
+      <div class="goal-item">
+        <div class="gt">第一站：脱离肥胖（BMI&lt;28）</div>
+        <div class="gv" id="goal1">填写身高体重后自动计算</div>
+        <div class="gbar"><div class="gfill" id="gbar1"></div></div>
+        <div class="gpct" id="gpct1">--</div>
+      </div>
+      <div class="goal-item">
+        <div class="gt">第二站：进入正常（BMI&lt;24）</div>
+        <div class="gv" id="goal2">填写身高体重后自动计算</div>
+        <div class="gbar"><div class="gfill" id="gbar2"></div></div>
+        <div class="gpct" id="gpct2">--</div>
+      </div>
+      <div class="goal-item">
+        <div class="gt">腰围：内脏脂肪指标</div>
+        <div class="gv" id="goal3">保存一次腰围后自动计算目标</div>
+      </div>
+    </div>
+    <div class="note" id="goalNote">第一站约 2 个月（每月减 8 斤），第二站约 5~6 个月。腰围比体重更重要：体重不动但腰围在减，就是内脏脂肪在消耗。</div>
+  </div>
+</div>
+
 <!-- 每周记录体重腰围 -->
 <div class="section">
   <h2><span class="no">记</span>每周量一次</h2>
@@ -148,7 +184,7 @@
     {id:"strength",title:"力量训练或拉伸", body:"每周2-3次做力量（深蹲、臀桥、俯卧撑、划船），其余天做5分钟拉伸。练到酸胀才算数。", hint:"没时间做有氧就先做力量，时间只够一种时，力量优先。"}
   ];
 
-  var store={ habits:{}, metrics:{}, params:{}};
+  var store={ habits:{}, metrics:{}, params:{}, goalStart:null};
   function load(){ try{ var s=localStorage.getItem(KEY); if(s) store=JSON.parse(s);}catch(e){} }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
   function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -188,6 +224,57 @@
       "BMI "+bmi.toFixed(1)+"："+level+"。每日热量目标"+target+"大卡（≈基础代谢"+Math.round(bmr)+"×活动系数1.2 − 缺口"+gap+"大卡）。燃脂心率区间 "+hrLo+"~"+hrHi+" 次/分。";
     store.params={h:h,w:w,a:a,r:r,bmi:Math.round(bmi*10)/10,bmr:Math.round(bmr),target:target,hrLo:hrLo,hrHi:hrHi};
     save();
+    renderGoals();
+  }
+
+  // ---------- 减重目标 ----------
+  function renderGoals(){
+    var p=store.params;
+    var mkeys=Object.keys(store.metrics).sort();
+    var latest=mkeys.length?store.metrics[mkeys[mkeys.length-1]]:null;
+    var curW=latest?latest.w:(p?p.w:null);
+    if(!p||!p.h||!curW){ return; }
+    var h=p.h;
+    // 两站目标体重：BMI 28 与 24 对应体重（kg），保留1位小数（身高换算成米再算）
+    var hm=h/100;
+    var w1kg=Math.round(hm*hm*28*10)/10;  // BMI<28 上限
+    var w2kg=Math.round(hm*hm*24*10)/10;  // BMI<24 上限
+    var startW=p.w; // 起始体重（首次填参数时的）
+    if(!store.goalStart){ store.goalStart={w:startW,wa:latest?latest.wa:null}; save(); }
+    var gs=store.goalStart;
+    // 基线腰围为空时，用最早一次测量记录回填
+    if(!gs.wa && mkeys.length){ gs.wa=store.metrics[mkeys[0]].wa; save(); }
+    // 第一站进度
+    var total1=gs.w-w1kg;
+    var done1=gs.w-curW;
+    var pct1=total1>0?Math.max(0,Math.min(100,Math.round(done1/total1*100))):100;
+    var g1=document.getElementById("goal1");
+    if(g1){
+      g1.innerHTML="目标体重 <b>"+w1kg+"kg</b> 以下（还需减 <b>"+Math.max(0,(curW-w1kg)).toFixed(1)+"</b>kg）";
+      document.getElementById("gbar1").style.width=pct1+"%";
+      document.getElementById("gpct1").textContent="已减 "+Math.max(0,done1).toFixed(1)+"kg / 共需减 "+total1.toFixed(1)+"kg（"+pct1+"%）";
+    }
+    // 第二站进度
+    var total2=gs.w-w2kg;
+    var done2=gs.w-curW;
+    var pct2=total2>0?Math.max(0,Math.min(100,Math.round(done2/total2*100))):100;
+    var g2=document.getElementById("goal2");
+    if(g2){
+      g2.innerHTML="目标体重 <b>"+w2kg+"</b>kg 以下（还需减 <b>"+Math.max(0,(curW-w2kg)).toFixed(1)+"</b>kg）";
+      document.getElementById("gbar2").style.width=pct2+"%";
+      document.getElementById("gpct2").textContent="已减 "+Math.max(0,done2).toFixed(1)+"kg / 共需减 "+total2.toFixed(1)+"kg（"+pct2+"%）";
+    }
+    // 腰围
+    var g3=document.getElementById("goal3");
+    if(g3){
+      if(gs.wa){
+        var curWa=latest?latest.wa:gs.wa;
+        var waDiff=curWa-gs.wa;
+        g3.innerHTML="基线 <b>"+gs.wa+"cm</b> → 现在 <b>"+curWa+"cm</b>（"+(waDiff<=0?"<b style='color:var(--green)'>减了 "+Math.abs(waDiff).toFixed(1)+"cm</b>":"先持平，别焦虑")+"）。目标：每月减 2~3cm，女性腰围 &lt;85cm。";
+      }else{
+        g3.innerHTML="在下方「每周量一次」保存一次腰围，这里会显示基线和目标。";
+      }
+    }
   }
   function restoreParams(){
     var p=store.params;
@@ -282,7 +369,7 @@
     store.metrics[todayStr()]={w:w,wa:c};
     document.getElementById("wWeight").value="";
     document.getElementById("wWaist").value="";
-    save(); renderMeasures();
+    save(); renderMeasures(); renderGoals();
   };
 
   // ---------- 导出 ----------
@@ -302,6 +389,7 @@
   calcParams();
   load();
   render();
+  renderGoals();
 })();
 </script>
 </body>
