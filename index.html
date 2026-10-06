@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>减重打卡 · 动态版</title>
+<style>
+  :root{
+    --paper:#fdfbf6;
+    --ink:#3a3a3a;
+    --muted:#8a8175;
+    --line:#e5ddd0;
+    --accent:#994b3e;
+    --accent-soft:#f3e8e2;
+    --green:#6b7f5e;
+    --green-soft:#eef2e9;
+    --warn:#b07a3c;
+    --warn-soft:#f6ecdd;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:"Songti SC","STSong","SimSun","Noto Serif CJK SC",serif;
+    background:var(--paper);color:var(--ink);
+    line-height:1.75;max-width:860px;margin:0 auto;padding:40px 22px 80px;
+  }
+  .kicker{font-size:12px;letter-spacing:.35em;color:var(--muted);margin-bottom:8px;text-align:center;}
+  h1{font-size:26px;font-weight:600;text-align:center;letter-spacing:.12em;color:#2f2a24;}
+  .sub{text-align:center;color:var(--muted);font-size:13.5px;margin-top:4px;}
+  .progress{max-width:420px;margin:22px auto 8px;text-align:center;}
+  .progress .bar{height:8px;background:#efe9df;border-radius:6px;overflow:hidden;}
+  .progress .fill{height:100%;background:var(--green);border-radius:6px;transition:width .4s;}
+  .progress .txt{font-size:12.5px;color:var(--muted);margin-top:6px;}
+  .section{margin-bottom:34px;}
+  h2{font-size:18px;font-weight:600;margin:26px 0 4px;display:flex;align-items:center;gap:9px;}
+  h2 .no{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;flex:none;}
+  .lead{color:var(--muted);font-size:13.5px;margin-bottom:14px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.03);position:relative;transition:opacity .3s;}
+  .card.done{opacity:.55;background:#f7f4ee;}
+  .card .top{display:flex;align-items:flex-start;gap:10px;}
+  .card .chk{width:20px;height:20px;flex:none;border:1.6px solid var(--accent);border-radius:6px;margin-top:2px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:#fff;color:#fff;font-size:13px;transition:all .15s;}
+  .card.done .chk{background:var(--green);border-color:var(--green);}
+  .card h3{font-size:15px;font-weight:600;margin:0 0 2px;color:#2f2a24;cursor:pointer;}
+  .card .tag{display:inline-block;font-size:11.5px;padding:0 9px;border-radius:20px;vertical-align:middle;margin-right:6px;}
+  .tag.g{background:var(--green-soft);color:var(--green);}
+  .tag.a{background:var(--accent-soft);color:var(--accent);}
+  .tag.w{background:var(--warn-soft);color:var(--warn);}
+  .card p{font-size:14px;color:#4a453d;margin-top:6px;}
+  .card .hint{font-size:12.5px;color:var(--warn);background:var(--warn-soft);border-left:3px solid var(--warn);padding:8px 10px;border-radius:0 6px 6px 0;margin-top:10px;}
+  .habit-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  .habit-row .lbl{font-size:13.5px;color:#4a453d;}
+  .habit-dots{display:flex;gap:5px;flex-wrap:wrap;}
+  .habit-dots .dot{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;background:#f0ece4;color:var(--muted);cursor:pointer;transition:all .15s;}
+  .habit-dots .dot.on{background:var(--green);color:#fff;}
+  .habit-dots .dot.today{outline:2px solid var(--accent);outline-offset:1px;}
+  .habit-dots .dot:hover{transform:scale(1.12);}
+  .folded{border-top:1px dashed var(--line);padding-top:12px;margin-top:16px;}
+  .folded summary{font-size:13px;color:var(--muted);cursor:pointer;user-select:none;}
+  .resume{max-width:720px;margin:26px auto 0;background:var(--accent-soft);border:1px solid #e4cfc4;border-radius:10px;padding:14px 18px;font-size:13.5px;color:#5a4a42;display:none;}
+  .resume b{color:var(--accent);}
+  .export-box{max-width:720px;margin:26px auto 0;text-align:center;}
+  .export-btn{font-family:inherit;font-size:13.5px;color:#fff;background:var(--accent);border:none;border-radius:8px;padding:10px 22px;cursor:pointer;letter-spacing:.08em;transition:opacity .15s;}
+  .export-btn:hover{opacity:.88;}
+  .export-tip{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;}
+  .export-ok{font-size:12.5px;color:var(--green);margin-top:8px;display:none;}
+  .param-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px;}
+  .param-item label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px;}
+  .param-item input{width:100%;font-family:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);}
+  .param-item input:focus{outline:none;border-color:var(--accent);}
+  .calc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px;}
+  .calc-item{background:var(--green-soft);border:1px solid #dbe3d3;border-radius:8px;padding:10px 12px;text-align:center;}
+  .calc-item .v{font-size:18px;font-weight:600;color:var(--green);}
+  .calc-item .k{font-size:12px;color:var(--muted);margin-top:2px;}
+  .note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.7;}
+  .footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;text-align:center;letter-spacing:.04em;}
+  .footer strong{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<div class="kicker">WEIGHT PLAN · 2026-10</div>
+<h1>减重打卡 · 动态版</h1>
+<div class="sub">每天三件小事 + 每周量一次 · 数据存在本地浏览器</div>
+
+<!-- 进度 -->
+<div class="progress">
+  <div class="bar"><div class="fill" id="fillBar"></div></div>
+  <div class="txt" id="progTxt"></div>
+</div>
+
+<!-- 个性化参数 -->
+<div class="section">
+  <h2><span class="no">算</span>我的专属参数</h2>
+  <div class="lead">填入下面 4 项，自动算出你的 BMI、每日热量目标和燃脂心率区间。</div>
+  <div class="card">
+    <div class="param-grid">
+      <div class="param-item"><label>身高（cm）</label><input id="pHeight" type="number" min="120" max="220" placeholder="如 160"></div>
+      <div class="param-item"><label>体重（kg）</label><input id="pWeight" type="number" min="30" max="200" placeholder="如 70"></div>
+      <div class="param-item"><label>年龄（岁）</label><input id="pAge" type="number" min="18" max="90" placeholder="如 45"></div>
+      <div class="param-item"><label>静息心率（次/分）</label><input id="pRest" type="number" min="40" max="110" placeholder="如 72（晨起测）"></div>
+    </div>
+    <div class="calc-grid" id="calcBox">
+      <div class="calc-item"><div class="v" id="cBmi">--</div><div class="k">BMI</div></div>
+      <div class="calc-item"><div class="v" id="cBmr">--</div><div class="k">基础代谢（大卡/天）</div></div>
+      <div class="calc-item"><div class="v" id="cTarget">--</div><div class="k">每日热量目标（大卡）</div></div>
+      <div class="calc-item"><div class="v" id="cHr">--</div><div class="k">燃脂心率区间（次/分）</div></div>
+    </div>
+    <div class="note" id="calcNote">填好后自动计算。热量目标 = 基础代谢 + 日常活动消耗 − 750~1000 大卡缺口（BMI≥28 时按医生建议）。燃脂心率 = 静息心率 + 储备心率 × 60%~85%。</div>
+  </div>
+</div>
+
+<!-- 每日三件小事 -->
+<div class="section" id="listWrap"></div>
+
+<!-- 每周记录体重腰围 -->
+<div class="section">
+  <h2><span class="no">记</span>每周量一次</h2>
+  <div class="lead">每周日早上空腹量，只记腰围和体重。体重可以不动，腰围变小就是赢。</div>
+  <div class="card">
+    <div class="param-grid">
+      <div class="param-item"><label>本周体重（kg）</label><input id="wWeight" type="number" min="30" max="200" step="0.1" placeholder="如 70.5"></div>
+      <div class="param-item"><label>本周腰围（cm）</label><input id="wWaist" type="number" min="50" max="160" step="0.5" placeholder="如 88"></div>
+    </div>
+    <div style="margin-top:12px;"><button class="export-btn" id="saveMeasureBtn" style="background:var(--green);">保存本周测量</button></div>
+    <div class="habit-row" id="measureRows"></div>
+  </div>
+</div>
+
+<!-- 导出 -->
+<div class="export-box">
+  <button class="export-btn" id="exportBtn">导出打卡数据</button>
+  <div class="export-ok" id="exportOk">已导出：把 JSON 文件放到工作空间，AI 会读取生成减重周报和下周建议。</div>
+  <div class="export-tip">每周日晚导出一次。我会据此生成你的减重周报：饮食完成率、运动时长、体重腰围趋势、下周调整建议。</div>
+</div>
+
+<div class="footer">
+  规则：每天晚饭后走30分钟 · 三餐211法则 · 不吃甜饮料和果汁 · 每周力量2-3次 · 每周一量腰围<br>
+  数据保存在本地浏览器，不会上传。
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY="oct-weight-plan-v1";
+  // 每日习惯：饮食211 / 有氧30分 / 力量或拉伸
+  var HABITS=[
+    {id:"diet",    title:"三餐按211法则", body:"2份蔬菜 + 1巴掌蛋白质 + 1拳主食。主食照吃，选粗粮；不碰甜饮料、果汁，水果≤200克。", hint:"连续3天没达标？先只戒甜饮料，别的照旧。戒掉一瓶含糖饮料=少摄入约150大卡。"},
+    {id:"cardio",  title:"中等强度有氧30分钟", body:"快走/骑车/游泳都行。强度标准：能说话但不能唱歌。用手表把心率压在燃脂区间。", hint:"连续3天没动，就把目标降级为「出门走10分钟」——先动起来。"},
+    {id:"strength",title:"力量训练或拉伸", body:"每周2-3次做力量（深蹲、臀桥、俯卧撑、划船），其余天做5分钟拉伸。练到酸胀才算数。", hint:"没时间做有氧就先做力量，时间只够一种时，力量优先。"}
+  ];
+
+  var store={ habits:{}, metrics:{}, params:{}};
+  function load(){ try{ var s=localStorage.getItem(KEY); if(s) store=JSON.parse(s);}catch(e){} }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+  function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function lastNDays(n){
+    var arr=[],d=new Date();
+    for(var i=n-1;i>=0;i--){ var t=new Date(d.getTime()-i*86400000); arr.push(t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0")); }
+    return arr;
+  }
+
+  // ---------- 参数计算 ----------
+  function calcParams(){
+    var h=parseFloat(document.getElementById("pHeight").value);
+    var w=parseFloat(document.getElementById("pWeight").value);
+    var a=parseFloat(document.getElementById("pAge").value);
+    var r=parseFloat(document.getElementById("pRest").value);
+    if(!h||!w||!a){ return; }
+    var bmi=w/((h/100)*(h/100));
+    // Mifflin-St Jeor 女性基础代谢
+    var bmr=10*w+6.25*h-5*a-161;
+    // 日常活动系数 1.4（轻体力）
+    var tdee=bmr*1.4;
+    var gap= bmi>=28 ? 875 : (bmi>=24?650:400); // 28以上 750-1000 取中
+    var target=Math.round(tdee-gap);
+    var hrLo="--", hrHi="--";
+    if(r&&r>30&&r<120){
+      var maxHr=220-a;
+      var reserve=maxHr-r;
+      hrLo=Math.round(r+reserve*0.60);
+      hrHi=Math.round(r+reserve*0.85);
+    }
+    document.getElementById("cBmi").textContent=bmi.toFixed(1);
+    document.getElementById("cBmr").textContent=Math.round(bmr);
+    document.getElementById("cTarget").textContent=target;
+    document.getElementById("cHr").textContent=hrLo+"~"+hrHi;
+    var level= bmi>=28 ?"肥胖（中国标准28以上）": (bmi>=24 ?"超重（24-28）":"正常（18.5-24）");
+    document.getElementById("calcNote").textContent=
+      "BMI "+bmi.toFixed(1)+"："+level+"。每日热量目标"+target+"大卡（≈基础代谢"+Math.round(bmr)+"×活动系数1.2 − 缺口"+gap+"大卡）。燃脂心率区间 "+hrLo+"~"+hrHi+" 次/分。";
+    store.params={h:h,w:w,a:a,r:r,bmi:Math.round(bmi*10)/10,bmr:Math.round(bmr),target:target,hrLo:hrLo,hrHi:hrHi};
+    save();
+  }
+  function restoreParams(){
+    var p=store.params;
+    if(!p) return;
+    if(p.h) document.getElementById("pHeight").value=p.h;
+    if(p.w) document.getElementById("pWeight").value=p.w;
+    if(p.a) document.getElementById("pAge").value=p.a;
+    if(p.r) document.getElementById("pRest").value=p.r;
+  }
+  function bindParamInputs(){
+    ["pHeight","pWeight","pAge","pRest"].forEach(function(id){
+      var el=document.getElementById(id);
+      el.addEventListener("change",calcParams);
+      el.addEventListener("input",calcParams);
+    });
+  }
+
+  // ---------- 渲染 ----------
+  var wrap=document.getElementById("listWrap");
+  function render(){
+    var t=todayStr();
+    // 完成率
+    var doneCnt=0,total=HABITS.length*1;
+    HABITS.forEach(function(x){ if(store.habits[t]&&store.habits[t][x.id]) doneCnt++; });
+    var pct=Math.round(doneCnt/total*100);
+    document.getElementById("fillBar").style.width=pct+"%";
+    document.getElementById("progTxt").textContent="今日减重三件事完成 " + pct + "% · 勾了 " + doneCnt + "/" + total + " 项";
+
+    // 习惯卡片
+    wrap.innerHTML="";
+    var h=document.createElement("h2"); h.innerHTML='<span class="no">做</span>每日三件小事'; wrap.appendChild(h);
+    HABITS.forEach(function(x){ wrap.appendChild(card(x)); });
+
+    // 降级提示
+    HABITS.forEach(function(x){
+      var miss=lastNDays(3).every(function(dt){ return !store.habits[dt]||!store.habits[dt][x.id]; });
+      if(miss){ setHint(x.id, x.hint); }
+    });
+    renderMeasures();
+    save();
+  }
+
+  function card(x){
+    var t=todayStr();
+    var isDone=!!(store.habits[t]&&store.habits[t][x.id]);
+    var div=document.createElement("div"); div.className="card"+(isDone?" done":"");
+    var top=document.createElement("div"); top.className="top";
+    var chk=document.createElement("span"); chk.className="chk"; chk.textContent="✓"; chk.title="标记完成";
+    chk.onclick=function(){ if(!store.habits[t]) store.habits[t]={}; store.habits[t][x.id]=!store.habits[t][x.id]; render(); };
+    var h3=document.createElement("h3"); h3.innerHTML='<span class="tag g">每日</span>'+x.title;
+    h3.onclick=chk.onclick;
+    top.appendChild(chk); top.appendChild(h3);
+    div.appendChild(top);
+    var body=document.createElement("div"); body.className="body"; body.innerHTML=x.body;
+    div.appendChild(body);
+    var row=document.createElement("div"); row.className="habit-row";
+    row.innerHTML='<span class="lbl">本周打卡：</span><span class="habit-dots" id="dots-'+x.id+'"></span>';
+    div.appendChild(row);
+    var dots=row.querySelector(".habit-dots");
+    var week=lastNDays(7);
+    week.forEach(function(dt){
+      var d=document.createElement("span"); d.className="dot"+(dt===t?" today":""); d.textContent=dt.slice(8,10);
+      var done=store.habits[dt]&&store.habits[dt][x.id];
+      if(done) d.classList.add("on");
+      d.title=dt+(done?" 已完成":" 未完成");
+      d.onclick=function(){ if(!store.habits[dt]) store.habits[dt]={}; store.habits[dt][x.id]=!store.habits[dt][x.id]; render(); };
+      dots.appendChild(d);
+    });
+    var hi=document.createElement("div"); hi.className="hint"; hi.id="hint-"+x.id; hi.style.display="none"; div.appendChild(hi);
+    return div;
+  }
+
+  function setHint(id,msg){ var el=document.getElementById("hint-"+id); if(el) { el.textContent=msg; el.style.display="block"; } }
+
+  // ---------- 每周测量 ----------
+  function renderMeasures(){
+    var box=document.getElementById("measureRows");
+    box.innerHTML="";
+    var keys=Object.keys(store.metrics).sort();
+    if(!keys.length){ box.innerHTML='<span class="lbl" style="color:var(--muted)">还没有记录，填上面两项点保存。</span>'; return; }
+    keys.slice(-8).forEach(function(k){
+      var m=store.metrics[k];
+      var s=document.createElement("span"); s.className="lbl"; s.style.background="var(--green-soft)"; s.style.padding="4px 10px"; s.style.borderRadius="16px";
+      s.textContent=k+"：体重"+m.w+"kg 腰围"+m.wa+"cm";
+      box.appendChild(s);
+    });
+  }
+  document.getElementById("saveMeasureBtn").onclick=function(){
+    var w=parseFloat(document.getElementById("wWeight").value);
+    var c=parseFloat(document.getElementById("wWaist").value);
+    if(!w||!c){ alert("请先填写体重和腰围"); return; }
+    store.metrics[todayStr()]={w:w,wa:c};
+    document.getElementById("wWeight").value="";
+    document.getElementById("wWaist").value="";
+    save(); renderMeasures();
+  };
+
+  // ---------- 导出 ----------
+  document.getElementById("exportBtn").onclick=function(){
+    var blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(), data:store},null,2)], {type:"application/json"});
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="减重打卡数据_"+todayStr()+".json";
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },200);
+    var ok=document.getElementById("exportOk");
+    if(ok) ok.style.display="block";
+  };
+
+  restoreParams();
+  bindParamInputs();
+  calcParams();
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
